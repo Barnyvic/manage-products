@@ -1,16 +1,23 @@
 import { Router } from "express";
-import { ProductController } from "../controllers/product.controller";
 import { protect } from "../middlewares/auth.middleware";
+import {
+  createProduct,
+  getProducts,
+  getProductById,
+  updateProduct,
+  deleteProduct,
+} from "../controllers/product.controller";
 
 const router = Router();
-const productController = new ProductController();
 
-router.get("/", productController.getProducts);
-router.get("/:id", productController.getProductById);
+// Public routes
+router.get("/", getProducts);
+router.get("/:id", getProductById);
 
-router.use(protect); // Protected routes below
-router.post("/", productController.createProduct);
-router.put("/:id", productController.updateProduct);
-router.delete("/:id", productController.deleteProduct);
+// Protected routes
+router.use(protect);
+router.post("/", createProduct);
+router.put("/:id", updateProduct);
+router.delete("/:id", deleteProduct);
 
 export default router;

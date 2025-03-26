@@ -4,40 +4,39 @@ import env from "../config/env";
 import { User } from "../models/user.model";
 import { errorResponse } from "../utils/apiResponse";
 
-interface JwtPayload {
-  id: string;
-}
-
 declare global {
   namespace Express {
     interface Request {
-      user?: any;
+      user?: {
+        id: string;
+      };
     }
   }
 }
 
-export const protect = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const protect = (req: Request, res: Response, next: NextFunction) => {
   try {
-    const token = req.headers.authorization?.replace("Bearer ", "");
+    const token = req.headers.authorization?.split(" ")[1];
 
     if (!token) {
-      return errorResponse(res, "No token provided", 401);
+      errorResponse(res, "No token provided", 401);
+      return;
     }
 
-    const decoded = jwt.verify(token, env.JWT_SECRET) as JwtPayload;
-    const user = await User.findById(decoded.id);
-
-    if (!user) {
-      return errorResponse(res, "User not found", 401);
-    }
-
-    req.user = user;
-    next();
+    const decoded = jwt.verify(token, env.JWT_SECRET) as { id: string };
+    User.findById(decoded.id)
+      .then((user) => {
+        if (!user) {
+          errorResponse(res, "User not found", 401);
+          return;
+        }
+        req.user = { id: user.id };
+        next();
+      })
+      .catch(() => {
+        errorResponse(res, "Invalid token", 401);
+      });
   } catch (error) {
-    return errorResponse(res, "Invalid token", 401);
+    errorResponse(res, "Invalid token", 401);
   }
 };

@@ -6,32 +6,24 @@ import { errorMiddleware } from "./middlewares/error.middleware";
 import authRoute from "./routes/auth.route";
 import productRoute from "./routes/product.route";
 
-class App {
-  public app: Application;
+const createApp = (): Application => {
+  const app = express();
 
-  constructor() {
-    this.app = express();
-    this.initializeMiddlewares();
-    this.initializeRoutes();
-    this.initializeErrorHandling();
-  }
+  // Initialize middlewares
+  app.use(cors());
+  app.use(helmet());
+  app.use(compression());
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
 
-  private initializeMiddlewares() {
-    this.app.use(cors());
-    this.app.use(helmet());
-    this.app.use(compression());
-    this.app.use(express.json());
-    this.app.use(express.urlencoded({ extended: true }));
-  }
+  // Initialize routes
+  app.use("/api/auth", authRoute);
+  app.use("/api/products", productRoute);
 
-  private initializeRoutes() {
-    this.app.use("/api/auth", authRoute);
-    this.app.use("/api/products", productRoute);
-  }
+  // Initialize error handling
+  app.use(errorMiddleware);
 
-  private initializeErrorHandling() {
-    this.app.use(errorMiddleware);
-  }
-}
+  return app;
+};
 
-export default App;
+export default createApp;
