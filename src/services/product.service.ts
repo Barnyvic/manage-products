@@ -1,8 +1,18 @@
 import { Product } from "../models/product.model";
 import { IProduct, ProductQuery } from "../interfaces/product.interface";
+import mongoose from "mongoose";
+
+type CreateProductInput = {
+  name: string;
+  description: string;
+  price: number;
+  category: string;
+  stock: number;
+  createdBy: string | mongoose.Types.ObjectId;
+};
 
 export const createProduct = async (
-  productData: Omit<IProduct, "createdAt" | "updatedAt">
+  productData: CreateProductInput
 ): Promise<IProduct> => {
   return Product.create(productData);
 };
