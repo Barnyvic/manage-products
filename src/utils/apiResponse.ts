@@ -15,19 +15,28 @@ export const sendResponse = <T>(
   });
 };
 
-export const successResponse = <T>(
+export const successResponse = (
   res: Response,
   message: string,
-  data?: T,
-  statusCode = 200
-): Response<ApiResponse<T>> => {
-  return sendResponse(res, statusCode, true, message, data);
+  data?: any,
+  statusCode: number = 200
+) => {
+  res.status(statusCode).json({
+    success: true,
+    message,
+    data,
+  });
 };
 
 export const errorResponse = (
   res: Response,
   message: string,
-  statusCode = 500
-): Response<ApiResponse<null>> => {
-  return sendResponse(res, statusCode, false, message);
+  statusCode: number = 500,
+  errors?: any
+) => {
+  res.status(statusCode).json({
+    success: false,
+    message,
+    errors,
+  });
 };

@@ -23,7 +23,7 @@ export const createProduct = async (
   try {
     const validation = await validate(createProductSchema, req);
     if (!validation.success) {
-      errorResponse(res, "Validation failed", 400);
+      errorResponse(res, "Validation failed", 400, validation.error);
       return;
     }
 
@@ -55,7 +55,7 @@ export const getProducts = async (
   try {
     const validation = await validate(productQuerySchema, req);
     if (!validation.success) {
-      errorResponse(res, "Validation failed", 400);
+      errorResponse(res, "Validation failed", 400, validation.error);
       return;
     }
 
@@ -100,18 +100,22 @@ export const getProductById = async (
 };
 
 export const updateProduct = async (
-  req: Request,
+  req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
 ) => {
   try {
     const validation = await validate(updateProductSchema, req);
     if (!validation.success) {
-      errorResponse(res, "Validation failed", 400);
+      errorResponse(res, "Validation failed", 400, validation.error);
       return;
     }
 
-    const product = await productService.updateProduct(req.params.id, req.body);
+    const product = await productService.updateProduct(
+      req.params.id,
+      req.body,
+      req.user?.id || ""
+    );
     if (!product) {
       errorResponse(res, "Product not found", 404);
       return;
@@ -123,7 +127,7 @@ export const updateProduct = async (
       return;
     }
     if (error instanceof Error) {
-      errorResponse(res, "Failed to update product", 400);
+      errorResponse(res, error.message, 400);
       return;
     }
     errorResponse(res, "An unknown error occurred", 500);
@@ -131,12 +135,15 @@ export const updateProduct = async (
 };
 
 export const deleteProduct = async (
-  req: Request,
+  req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    const product = await productService.deleteProduct(req.params.id);
+    const product = await productService.deleteProduct(
+      req.params.id,
+      req.user?.id || ""
+    );
     if (!product) {
       errorResponse(res, "Product not found", 404);
       return;
@@ -148,7 +155,7 @@ export const deleteProduct = async (
       return;
     }
     if (error instanceof Error) {
-      errorResponse(res, "Failed to delete product", 400);
+      errorResponse(res, error.message, 400);
       return;
     }
     errorResponse(res, "An unknown error occurred", 500);

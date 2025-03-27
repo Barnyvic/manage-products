@@ -13,7 +13,7 @@ export const register = async (
   try {
     const validation = await validate(registerSchema, req);
     if (!validation.success) {
-      errorResponse(res, "Validation failed", 400);
+      errorResponse(res, "Validation failed", 400, validation.error);
       return;
     }
 
@@ -25,7 +25,7 @@ export const register = async (
       return;
     }
     if (error instanceof Error) {
-      errorResponse(res, "Registration failed", 400);
+      errorResponse(res, error.message, 400);
       return;
     }
     errorResponse(res, "An unknown error occurred", 500);
@@ -40,7 +40,7 @@ export const login = async (
   try {
     const validation = await validate(loginSchema, req);
     if (!validation.success) {
-      errorResponse(res, "Validation failed", 400);
+      errorResponse(res, "Validation failed", 400, validation.error);
       return;
     }
 
@@ -52,7 +52,7 @@ export const login = async (
       return;
     }
     if (error instanceof Error) {
-      errorResponse(res, "Login failed", 401);
+      errorResponse(res, error.message, 401);
       return;
     }
     errorResponse(res, "An unknown error occurred", 500);

@@ -1,6 +1,7 @@
 import { Product } from "../models/product.model";
 import { IProduct, ProductQuery } from "../interfaces/product.interface";
 import { CreateProductInput } from "../types/product.types";
+import { AppError } from "../interfaces/error.interface";
 
 /**
  * Creates a new product in the system
@@ -73,12 +74,24 @@ export const getProductById = async (id: string): Promise<IProduct | null> => {
  * Updates a product by its ID
  * @param id - The ID of the product to update
  * @param updateData - Partial product data to update
+ * @param userId - The ID of the user making the request
  * @returns Promise containing the updated product or null if not found
+ * @throws AppError if user is not authorized to update the product
  */
 export const updateProduct = async (
   id: string,
-  updateData: Partial<IProduct>
+  updateData: Partial<IProduct>,
+  userId: string
 ): Promise<IProduct | null> => {
+  const product = await Product.findById(id);
+  if (!product) {
+    return null;
+  }
+
+  if (product.createdBy.toString() !== userId) {
+    throw new AppError("You are not authorized to update this product", 403);
+  }
+
   return Product.findByIdAndUpdate(id, updateData, { new: true }).populate(
     "createdBy",
     "name email"
@@ -88,8 +101,22 @@ export const updateProduct = async (
 /**
  * Deletes a product by its ID
  * @param id - The ID of the product to delete
+ * @param userId - The ID of the user making the request
  * @returns Promise containing the deleted product or null if not found
+ * @throws AppError if user is not authorized to delete the product
  */
-export const deleteProduct = async (id: string): Promise<IProduct | null> => {
+export const deleteProduct = async (
+  id: string,
+  userId: string
+): Promise<IProduct | null> => {
+  const product = await Product.findById(id);
+  if (!product) {
+    return null;
+  }
+
+  if (product.createdBy.toString() !== userId) {
+    throw new AppError("You are not authorized to delete this product", 403);
+  }
+
   return Product.findByIdAndDelete(id);
 };
