@@ -1,15 +1,6 @@
 import { Product } from "../models/product.model";
 import { IProduct, ProductQuery } from "../interfaces/product.interface";
-import mongoose from "mongoose";
-
-type CreateProductInput = {
-  name: string;
-  description: string;
-  price: number;
-  category: string;
-  stock: number;
-  createdBy: string | mongoose.Types.ObjectId;
-};
+import { CreateProductInput } from "../types/product.types";
 
 /**
  * Creates a new product in the system

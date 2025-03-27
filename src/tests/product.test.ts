@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import {
   createProduct,
   getProducts,
@@ -5,63 +6,64 @@ import {
   updateProduct,
   deleteProduct,
 } from "../services/product.service";
-import mongoose from "mongoose";
-
-type CreateProductInput = {
-  name: string;
-  description: string;
-  price: number;
-  category: string;
-  stock: number;
-  createdBy: mongoose.Types.ObjectId;
-};
+import {
+  createTestUser,
+  createTestProduct,
+  setupTestData,
+  TestData,
+} from "./helpers";
+import { IProduct } from "../interfaces/product.interface";
 
 describe("Product Service", () => {
-  const userId = new mongoose.Types.ObjectId();
-
-  const mockProduct: CreateProductInput = {
-    name: "Test Product",
-    description: "Test Description",
-    price: 99.99,
-    category: "Test Category",
-    createdBy: userId,
-    stock: 10,
-  };
-
   describe("createProduct", () => {
     it("should create a product successfully", async () => {
-      const result = await createProduct(mockProduct);
-      expect(result).toHaveProperty("name", mockProduct.name);
-      expect(result).toHaveProperty("price", mockProduct.price);
-      expect(result.createdBy.toString()).toBe(userId.toString());
+      const user = await createTestUser();
+      const productData = await createTestProduct(user.id);
+      const result = await createProduct(productData);
+
+      expect(result).toHaveProperty("name", productData.name);
+      expect(result).toHaveProperty("price", productData.price);
+      expect(result.createdBy.toString()).toBe(user.id);
     });
 
     it("should throw error if required fields are missing", async () => {
-      const invalidProduct = { ...mockProduct } as any;
-      delete invalidProduct.name;
-      await expect(createProduct(invalidProduct)).rejects.toThrow();
+      const user = await createTestUser();
+      const productData = await createTestProduct(user.id);
+      delete (productData as any).name;
+      await expect(createProduct(productData)).rejects.toThrow();
     });
   });
 
   describe("getProducts", () => {
     beforeEach(async () => {
-      await createProduct(mockProduct);
+      await setupTestData();
     });
 
     it("should get all products", async () => {
       const result = await getProducts({});
       expect(result.products).toBeInstanceOf(Array);
       expect(result.products.length).toBeGreaterThan(0);
-      expect(result.products[0]).toHaveProperty("name", mockProduct.name);
+      expect(result.products[0]).toHaveProperty("name", "Test Product");
       expect(result.pagination).toBeDefined();
     });
 
     it("should filter products by category", async () => {
-      const result = await getProducts({ category: mockProduct.category });
-      expect(result.products[0]).toHaveProperty(
-        "category",
-        mockProduct.category
-      );
+      const result = await getProducts({ category: "Test Category" });
+      expect(result.products[0]).toHaveProperty("category", "Test Category");
+    });
+
+    it("should handle pagination", async () => {
+      const user = await createTestUser();
+      // Create 15 products
+      for (let i = 0; i < 15; i++) {
+        const productData = await createTestProduct(user.id);
+        productData.name = `Test Product ${i}`;
+        await createProduct(productData);
+      }
+
+      const result = await getProducts({ page: 2, limit: 10 });
+      expect(result.products.length).toBeLessThanOrEqual(10);
+      expect(result.pagination.page).toBe(2);
     });
   });
 
@@ -69,14 +71,14 @@ describe("Product Service", () => {
     let productId: string;
 
     beforeEach(async () => {
-      const product = await createProduct(mockProduct);
-      productId = product._id?.toString() || "";
+      const { product } = await setupTestData();
+      productId = (product as any)._id.toString();
     });
 
     it("should get product by id", async () => {
       const product = await getProductById(productId);
-      expect(product).toHaveProperty("name", mockProduct.name);
-      expect(product?._id?.toString()).toBe(productId);
+      expect(product).toHaveProperty("name", "Test Product");
+      expect((product as any)?._id.toString()).toBe(productId);
     });
 
     it("should return null for non-existent product", async () => {
@@ -90,8 +92,8 @@ describe("Product Service", () => {
     let productId: string;
 
     beforeEach(async () => {
-      const product = await createProduct(mockProduct);
-      productId = product._id?.toString() || "";
+      const { product } = await setupTestData();
+      productId = (product as any)._id.toString();
     });
 
     it("should update product successfully", async () => {
@@ -115,8 +117,8 @@ describe("Product Service", () => {
     let productId: string;
 
     beforeEach(async () => {
-      const product = await createProduct(mockProduct);
-      productId = product._id?.toString() || "";
+      const { product } = await setupTestData();
+      productId = (product as any)._id.toString();
     });
 
     it("should delete product successfully", async () => {
