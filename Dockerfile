@@ -3,10 +3,11 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Copy package files
 COPY package*.json ./
-COPY yarn.lock ./
 
-RUN yarn install --frozen-lockfile
+# Install dependencies
+RUN yarn install
 
 COPY . .
 
@@ -17,10 +18,11 @@ FROM node:20-alpine
 
 WORKDIR /app
 
+# Copy package files
 COPY package*.json ./
-COPY yarn.lock ./
 
-RUN yarn install --frozen-lockfile --production
+# Install production dependencies
+RUN yarn install --production
 
 COPY --from=builder /app/dist ./dist
 COPY .env.example ./.env
