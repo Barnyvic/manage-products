@@ -53,7 +53,7 @@ describe("Product Service", () => {
     });
 
     it("should handle pagination", async () => {
-      const user = await createTestUser();
+      const user = await createTestUser("pagination-test@example.com");
       // Create 15 products
       for (let i = 0; i < 15; i++) {
         const productData = await createTestProduct(user.id);

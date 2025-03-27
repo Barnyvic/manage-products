@@ -9,13 +9,12 @@ export interface TestData {
   product: mongoose.Document & IProduct;
 }
 
-export const createTestUser = async () => {
-  const user = await User.create({
+export const createTestUser = async (email?: string) => {
+  return User.create({
     name: "Test User",
-    email: "test@example.com",
-    password: "Password123!",
+    email: email || "test@example.com",
+    password: "password123",
   });
-  return user;
 };
 
 export const createTestProduct = async (
