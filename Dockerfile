@@ -21,8 +21,9 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install production dependencies
-RUN yarn install --production
+# Install production dependencies including TypeScript runtime dependencies
+RUN yarn install --production && \
+    yarn add tslib @types/node
 
 COPY --from=builder /app/dist ./dist
 COPY .env.example ./.env
