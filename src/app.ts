@@ -13,7 +13,18 @@ import productRoute from "./routes/product.route";
 const createApp = (): Application => {
   const app = express();
 
-  app.use(cors());
+  // CORS configuration
+  const corsOptions = {
+    origin: process.env.ALLOWED_ORIGINS?.split(",") || [
+      "http://localhost:3000",
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+    maxAge: 86400,
+  };
+
+  app.use(cors(corsOptions));
   app.use(helmet());
   app.use(compression());
   app.use(express.json());
