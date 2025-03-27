@@ -1,11 +1,11 @@
 {
   "compilerOptions": {
     "types": ["node", "jest"],
-    "target": "ES2021",
-    "module": "CommonJS",
+    "target": "es2016",
+    "module": "commonjs",
     "moduleResolution": "node",
     "sourceMap": true,
-    "outDir": "build",
+    "outDir": "./dist",
     "baseUrl": "./",
     "skipLibCheck": true,
     "esModuleInterop": true,
@@ -29,5 +29,5 @@
     "typeRoots": ["@types", "./node_modules/@types"]
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "build", "src/__tests__/**/*"]
+  "exclude": ["src/tests/**/*", "node_modules"]
 }
