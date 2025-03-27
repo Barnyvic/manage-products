@@ -9,6 +9,7 @@ import {
 } from "./middlewares/rateLimit.middleware";
 import authRoute from "./routes/auth.route";
 import productRoute from "./routes/product.route";
+import healthRoute from "./routes/health.route";
 
 const createApp = (): Application => {
   const app = express();
@@ -28,6 +29,8 @@ const createApp = (): Application => {
   app.use(compression());
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
+
+  app.use("/api/v1/health", healthRoute);
 
   app.use("/api/v1/auth", authLimiter);
   app.use("/api/v1", generalLimiter);
