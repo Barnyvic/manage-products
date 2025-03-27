@@ -2,6 +2,7 @@ import { Product } from "../models/product.model";
 import { IProduct, ProductQuery } from "../interfaces/product.interface";
 import { CreateProductInput } from "../types/product.types";
 import { AppError } from "../interfaces/error.interface";
+import { SortOrder } from "mongoose";
 
 /**
  * Creates a new product in the system
@@ -44,9 +45,29 @@ export const getProducts = async (query: ProductQuery) => {
     filter.category = category;
   }
 
+  // Define valid sort fields
+  const validSortFields = {
+    name: 1,
+    price: 1,
+    category: 1,
+    createdAt: 1,
+    updatedAt: 1,
+    stock: 1,
+  };
+
+  // Create sort object with proper type
+  const sort: { [key: string]: SortOrder } = {
+    [sortBy]: order === "desc" ? -1 : 1,
+  };
+
+  // Validate sort field
+  if (!(sortBy in validSortFields)) {
+    throw new AppError("Invalid sort field", 400);
+  }
+
   const total = await Product.countDocuments(filter);
   const products = await Product.find(filter)
-    .sort({ [sortBy]: order === "desc" ? -1 : 1 })
+    .sort(sort)
     .skip((page - 1) * limit)
     .limit(limit)
     .populate("createdBy", "name email");

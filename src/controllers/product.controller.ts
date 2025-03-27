@@ -67,7 +67,7 @@ export const getProducts = async (
       return;
     }
     if (error instanceof Error) {
-      errorResponse(res, "Failed to retrieve products", 400);
+      errorResponse(res, error.message, 400);
       return;
     }
     errorResponse(res, "An unknown error occurred", 500);

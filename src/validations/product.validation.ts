@@ -2,45 +2,51 @@ import { z } from "zod";
 
 export const createProductSchema = z.object({
   body: z.object({
-    name: z.string().min(2, "Name must be at least 2 characters"),
-    description: z
-      .string()
-      .min(10, "Description must be at least 10 characters"),
-    price: z.number().min(0, "Price must be greater than or equal to 0"),
-    category: z.string().min(2, "Category must be at least 2 characters"),
-    stock: z.number().min(0, "Stock must be greater than or equal to 0"),
+    name: z.string().min(1, "Name is required"),
+    description: z.string().min(1, "Description is required"),
+    price: z.number().positive("Price must be positive"),
+    category: z.string().min(1, "Category is required"),
+    stock: z.number().int().min(0, "Stock must be a non-negative integer"),
   }),
 });
 
 export const updateProductSchema = z.object({
   body: z.object({
-    name: z.string().min(2, "Name must be at least 2 characters").optional(),
-    description: z
-      .string()
-      .min(10, "Description must be at least 10 characters")
-      .optional(),
-    price: z
-      .number()
-      .min(0, "Price must be greater than or equal to 0")
-      .optional(),
-    category: z
-      .string()
-      .min(2, "Category must be at least 2 characters")
-      .optional(),
+    name: z.string().min(1, "Name is required").optional(),
+    description: z.string().min(1, "Description is required").optional(),
+    price: z.number().positive("Price must be positive").optional(),
+    category: z.string().min(1, "Category is required").optional(),
     stock: z
       .number()
-      .min(0, "Stock must be greater than or equal to 0")
+      .int()
+      .min(0, "Stock must be a non-negative integer")
       .optional(),
   }),
 });
 
 export const productQuerySchema = z.object({
   query: z.object({
-    page: z.string().regex(/^\d+$/).transform(Number).optional(),
-    limit: z.string().regex(/^\d+$/).transform(Number).optional(),
+    page: z
+      .string()
+      .transform((val) => parseInt(val, 10))
+      .pipe(z.number().min(1, "Page must be at least 1"))
+      .optional(),
+    limit: z
+      .string()
+      .transform((val) => parseInt(val, 10))
+      .pipe(z.number().min(1, "Limit must be at least 1"))
+      .optional(),
     search: z.string().optional(),
     category: z.string().optional(),
-    sortBy: z.string().optional(),
-    order: z.enum(["asc", "desc"]).optional(),
+    sortBy: z
+      .enum(["name", "price", "category", "createdAt", "updatedAt"], {
+        errorMap: () => ({ message: "Invalid sort field" }),
+      })
+      .optional(),
+    order: z
+      .enum(["asc", "desc"], {
+        errorMap: () => ({ message: "Sort order must be 'asc' or 'desc'" }),
+      })
+      .optional(),
   }),
 });
