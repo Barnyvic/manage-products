@@ -1,25 +1,23 @@
 import mongoose from "mongoose";
 import { User } from "../models/user.model";
 import { Product } from "../models/product.model";
-import { CreateProductInput } from "../types/product.types";
 import { IProduct } from "../interfaces/product.interface";
 
 export interface TestData {
   user: mongoose.Document;
-  product: mongoose.Document & IProduct;
+  product: IProduct & { _id: mongoose.Types.ObjectId };
 }
 
-export const createTestUser = async (email?: string) => {
-  return User.create({
+export const createTestUser = async (email: string = "test@example.com") => {
+  const user = await User.create({
     name: "Test User",
-    email: email || "test@example.com",
+    email,
     password: "password123",
   });
+  return user;
 };
 
-export const createTestProduct = async (
-  userId: string
-): Promise<CreateProductInput> => {
+export const createTestProduct = async (userId: string) => {
   return {
     name: "Test Product",
     description: "Test Description",
@@ -30,12 +28,12 @@ export const createTestProduct = async (
   };
 };
 
-export const setupTestData = async () => {
+export const setupTestData = async (): Promise<TestData> => {
   const user = await createTestUser();
   const productData = await createTestProduct(user.id);
   const product = await Product.create(productData);
   return {
     user,
-    product: product as mongoose.Document & IProduct,
+    product: product as IProduct & { _id: mongoose.Types.ObjectId },
   };
 };

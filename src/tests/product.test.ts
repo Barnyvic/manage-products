@@ -12,7 +12,8 @@ import {
   setupTestData,
   TestData,
 } from "./helpers";
-import { IProduct } from "../interfaces/product.interface";
+import { IProduct, ProductResponse } from "../interfaces/product.interface";
+import { getCachedData } from "../utils/redis";
 
 describe("Product Service", () => {
   describe("createProduct", () => {
@@ -65,6 +66,24 @@ describe("Product Service", () => {
       expect(result.products.length).toBeLessThanOrEqual(10);
       expect(result.pagination.page).toBe(2);
     });
+
+    it("should return cached data on subsequent requests", async () => {
+      const query = { category: "Test Category" };
+      const result1 = await getProducts(query);
+
+      // Verify cache exists
+      const cacheKey = `products:${JSON.stringify(query)}`;
+      const cachedData = await getCachedData<ProductResponse>(cacheKey);
+      expect(cachedData).toBeTruthy();
+      expect(cachedData?.products[0]).toHaveProperty(
+        "category",
+        "Test Category"
+      );
+
+      // Second request should return cached data
+      const result2 = await getProducts(query);
+      expect(result2).toEqual(result1);
+    });
   });
 
   describe("getProductById", () => {
@@ -72,19 +91,35 @@ describe("Product Service", () => {
 
     beforeEach(async () => {
       const { product } = await setupTestData();
-      productId = (product as any)._id.toString();
+      productId = product._id.toString();
     });
 
     it("should get product by id", async () => {
-      const product = await getProductById(productId);
+      const product = (await getProductById(productId)) as IProduct & {
+        _id: mongoose.Types.ObjectId;
+      };
       expect(product).toHaveProperty("name", "Test Product");
-      expect((product as any)?._id.toString()).toBe(productId);
+      expect(product?._id.toString()).toBe(productId);
     });
 
     it("should return null for non-existent product", async () => {
       const nonExistentId = new mongoose.Types.ObjectId().toString();
       const result = await getProductById(nonExistentId);
       expect(result).toBeNull();
+    });
+
+    it("should return cached data on subsequent requests", async () => {
+      const product1 = await getProductById(productId);
+
+      // Verify cache exists
+      const cacheKey = `product:${productId}`;
+      const cachedData = await getCachedData<IProduct>(cacheKey);
+      expect(cachedData).toBeTruthy();
+      expect(cachedData?.name).toBe("Test Product");
+
+      // Second request should return cached data
+      const product2 = await getProductById(productId);
+      expect(product2).toEqual(product1);
     });
   });
 
@@ -94,7 +129,7 @@ describe("Product Service", () => {
 
     beforeEach(async () => {
       const { product, user } = await setupTestData();
-      productId = (product as any)._id.toString();
+      productId = product._id.toString();
       userId = user.id;
     });
 
@@ -125,6 +160,20 @@ describe("Product Service", () => {
         updateProduct(productId, updateData, otherUser.id)
       ).rejects.toThrow("You are not authorized to update this product");
     });
+
+    it("should invalidate cache after update", async () => {
+      // First get to create cache
+      await getProductById(productId);
+
+      // Update product
+      const updateData = { name: "Updated Product" };
+      await updateProduct(productId, updateData, userId);
+
+      // Verify cache is invalidated
+      const cacheKey = `product:${productId}`;
+      const cachedData = await getCachedData<IProduct>(cacheKey);
+      expect(cachedData).toBeNull();
+    });
   });
 
   describe("deleteProduct", () => {
@@ -133,7 +182,7 @@ describe("Product Service", () => {
 
     beforeEach(async () => {
       const { product, user } = await setupTestData();
-      productId = (product as any)._id.toString();
+      productId = product._id.toString();
       userId = user.id;
     });
 
@@ -154,6 +203,19 @@ describe("Product Service", () => {
       await expect(deleteProduct(productId, otherUser.id)).rejects.toThrow(
         "You are not authorized to delete this product"
       );
+    });
+
+    it("should invalidate cache after delete", async () => {
+      // First get to create cache
+      await getProductById(productId);
+
+      // Delete product
+      await deleteProduct(productId, userId);
+
+      // Verify cache is invalidated
+      const cacheKey = `product:${productId}`;
+      const cachedData = await getCachedData<IProduct>(cacheKey);
+      expect(cachedData).toBeNull();
     });
   });
 });

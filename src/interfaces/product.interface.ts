@@ -19,3 +19,12 @@ export interface ProductQuery {
   sortBy?: string;
   order?: "asc" | "desc";
 }
+
+export interface ProductResponse {
+  products: IProduct[];
+  pagination: {
+    total: number;
+    page: number;
+    pages: number;
+  };
+}

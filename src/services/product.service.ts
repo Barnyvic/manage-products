@@ -1,8 +1,17 @@
 import { Product } from "../models/product.model";
-import { IProduct, ProductQuery } from "../interfaces/product.interface";
+import {
+  IProduct,
+  ProductQuery,
+  ProductResponse,
+} from "../interfaces/product.interface";
 import { CreateProductInput } from "../types/product.types";
 import { AppError } from "../interfaces/error.interface";
 import { FilterQuery } from "mongoose";
+import { getCachedData, setCachedData, invalidateCache } from "../utils/redis";
+
+const CACHE_TTL = 3600; // 1 hour in seconds
+const PRODUCTS_CACHE_PREFIX = "products:";
+const PRODUCT_CACHE_PREFIX = "product:";
 
 /**
  * Creates a new product in the system
@@ -13,7 +22,10 @@ import { FilterQuery } from "mongoose";
 export const createProduct = async (
   productData: CreateProductInput
 ): Promise<IProduct> => {
-  return Product.create(productData);
+  const product = await Product.create(productData);
+  // Invalidate products cache when new product is created
+  await invalidateCache(`${PRODUCTS_CACHE_PREFIX}*`);
+  return product;
 };
 
 /**
@@ -27,7 +39,9 @@ export const createProduct = async (
  * @param query.order - Sort order: 'asc' or 'desc' (default: desc)
  * @returns Promise containing products and pagination info
  */
-export const getProducts = async (query: ProductQuery) => {
+export const getProducts = async (
+  query: ProductQuery
+): Promise<ProductResponse> => {
   const {
     page = 1,
     limit = 10,
@@ -36,6 +50,22 @@ export const getProducts = async (query: ProductQuery) => {
     sortBy = "createdAt",
     order = "desc",
   } = query;
+
+  // Create cache key based on query parameters
+  const cacheKey = `${PRODUCTS_CACHE_PREFIX}${JSON.stringify({
+    page,
+    limit,
+    search,
+    category,
+    sortBy,
+    order,
+  })}`;
+
+  // Try to get from cache first
+  const cachedData = await getCachedData<ProductResponse>(cacheKey);
+  if (cachedData) {
+    return cachedData;
+  }
 
   const filter: FilterQuery<IProduct> = {};
   if (search) {
@@ -52,7 +82,7 @@ export const getProducts = async (query: ProductQuery) => {
     .limit(limit)
     .populate("createdBy", "name email");
 
-  return {
+  const result: ProductResponse = {
     products,
     pagination: {
       total,
@@ -60,6 +90,11 @@ export const getProducts = async (query: ProductQuery) => {
       pages: Math.ceil(total / limit),
     },
   };
+
+  // Cache the result
+  await setCachedData(cacheKey, result, CACHE_TTL);
+
+  return result;
 };
 
 /**
@@ -68,7 +103,25 @@ export const getProducts = async (query: ProductQuery) => {
  * @returns Promise containing the product or null if not found
  */
 export const getProductById = async (id: string): Promise<IProduct | null> => {
-  return Product.findById(id).populate("createdBy", "name email");
+  const cacheKey = `${PRODUCT_CACHE_PREFIX}${id}`;
+
+  // Try to get from cache first
+  const cachedProduct = await getCachedData<IProduct>(cacheKey);
+  if (cachedProduct) {
+    return cachedProduct;
+  }
+
+  const product = await Product.findById(id).populate(
+    "createdBy",
+    "name email"
+  );
+
+  // Cache the result if product exists
+  if (product) {
+    await setCachedData(cacheKey, product, CACHE_TTL);
+  }
+
+  return product;
 };
 
 /**
@@ -93,10 +146,17 @@ export const updateProduct = async (
     throw new AppError("You are not authorized to update this product", 403);
   }
 
-  return Product.findByIdAndUpdate(id, updateData, { new: true }).populate(
-    "createdBy",
-    "name email"
-  );
+  const updatedProduct = await Product.findByIdAndUpdate(id, updateData, {
+    new: true,
+  }).populate("createdBy", "name email");
+
+  if (updatedProduct) {
+    // Invalidate both product and products caches
+    await invalidateCache(`${PRODUCT_CACHE_PREFIX}${id}`);
+    await invalidateCache(`${PRODUCTS_CACHE_PREFIX}*`);
+  }
+
+  return updatedProduct;
 };
 
 /**
@@ -119,5 +179,13 @@ export const deleteProduct = async (
     throw new AppError("You are not authorized to delete this product", 403);
   }
 
-  return Product.findByIdAndDelete(id);
+  const deletedProduct = await Product.findByIdAndDelete(id);
+
+  if (deletedProduct) {
+    // Invalidate both product and products caches
+    await invalidateCache(`${PRODUCT_CACHE_PREFIX}${id}`);
+    await invalidateCache(`${PRODUCTS_CACHE_PREFIX}*`);
+  }
+
+  return deletedProduct;
 };
