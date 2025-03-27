@@ -13,7 +13,6 @@ import productRoute from "./routes/product.route";
 const createApp = (): Application => {
   const app = express();
 
-  // CORS configuration
   const corsOptions = {
     origin: process.env.ALLOWED_ORIGINS?.split(",") || [
       "http://localhost:3000",
@@ -30,15 +29,12 @@ const createApp = (): Application => {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
-  // Apply rate limiting
   app.use("/api/v1/auth", authLimiter);
   app.use("/api/v1", generalLimiter);
 
-  // Initialize routes with versioning
   app.use("/api/v1/auth", authRoute);
   app.use("/api/v1/products", productRoute);
 
-  // Initialize error handling
   app.use(errorMiddleware);
 
   return app;
