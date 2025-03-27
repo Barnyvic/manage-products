@@ -2,7 +2,16 @@ import Redis from "ioredis";
 import { logger } from "./logger";
 
 const redisClient = new Redis(
-  process.env.REDIS_URL || "redis://localhost:6379"
+  process.env.REDIS_URL || "redis://localhost:6379",
+  {
+    db: process.env.NODE_ENV === "test" ? 1 : 0, 
+    retryStrategy: (times: number) => {
+      if (times > 3) {
+        return null; 
+      }
+      return Math.min(times * 50, 2000); 
+    },
+  }
 );
 
 redisClient.on("error", (error) => {
@@ -44,6 +53,15 @@ export const invalidateCache = async (pattern: string): Promise<void> => {
     }
   } catch (error) {
     logger.error("Error invalidating cache:", error);
+  }
+};
+
+export const clearRedisCache = async (): Promise<void> => {
+  try {
+    await redisClient.flushdb();
+    logger.info("Redis cache cleared");
+  } catch (error) {
+    logger.error("Error clearing Redis cache:", error);
   }
 };
 

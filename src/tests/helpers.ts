@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { User } from "../models/user.model";
 import { Product } from "../models/product.model";
 import { IProduct } from "../interfaces/product.interface";
+import redisClient from "../utils/redis";
 
 export interface TestData {
   user: mongoose.Document;
@@ -36,4 +37,9 @@ export const setupTestData = async (): Promise<TestData> => {
     user,
     product: product as IProduct & { _id: mongoose.Types.ObjectId },
   };
+};
+
+// Clean up Redis cache after tests
+export const clearRedisCache = async () => {
+  await redisClient.flushall();
 };

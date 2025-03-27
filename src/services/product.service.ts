@@ -9,7 +9,7 @@ import { AppError } from "../interfaces/error.interface";
 import { FilterQuery } from "mongoose";
 import { getCachedData, setCachedData, invalidateCache } from "../utils/redis";
 
-const CACHE_TTL = 3600; // 1 hour in seconds
+const CACHE_TTL = 3600; 
 const PRODUCTS_CACHE_PREFIX = "products:";
 const PRODUCT_CACHE_PREFIX = "product:";
 
@@ -23,7 +23,6 @@ export const createProduct = async (
   productData: CreateProductInput
 ): Promise<IProduct> => {
   const product = await Product.create(productData);
-  // Invalidate products cache when new product is created
   await invalidateCache(`${PRODUCTS_CACHE_PREFIX}*`);
   return product;
 };
@@ -51,7 +50,6 @@ export const getProducts = async (
     order = "desc",
   } = query;
 
-  // Create cache key based on query parameters
   const cacheKey = `${PRODUCTS_CACHE_PREFIX}${JSON.stringify({
     page,
     limit,
@@ -61,7 +59,6 @@ export const getProducts = async (
     order,
   })}`;
 
-  // Try to get from cache first
   const cachedData = await getCachedData<ProductResponse>(cacheKey);
   if (cachedData) {
     return cachedData;
@@ -91,7 +88,6 @@ export const getProducts = async (
     },
   };
 
-  // Cache the result
   await setCachedData(cacheKey, result, CACHE_TTL);
 
   return result;
@@ -116,7 +112,6 @@ export const getProductById = async (id: string): Promise<IProduct | null> => {
     "name email"
   );
 
-  // Cache the result if product exists
   if (product) {
     await setCachedData(cacheKey, product, CACHE_TTL);
   }
@@ -151,7 +146,6 @@ export const updateProduct = async (
   }).populate("createdBy", "name email");
 
   if (updatedProduct) {
-    // Invalidate both product and products caches
     await invalidateCache(`${PRODUCT_CACHE_PREFIX}${id}`);
     await invalidateCache(`${PRODUCTS_CACHE_PREFIX}*`);
   }
@@ -182,7 +176,6 @@ export const deleteProduct = async (
   const deletedProduct = await Product.findByIdAndDelete(id);
 
   if (deletedProduct) {
-    // Invalidate both product and products caches
     await invalidateCache(`${PRODUCT_CACHE_PREFIX}${id}`);
     await invalidateCache(`${PRODUCTS_CACHE_PREFIX}*`);
   }

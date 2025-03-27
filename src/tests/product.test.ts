@@ -11,11 +11,23 @@ import {
   createTestProduct,
   setupTestData,
   TestData,
+  clearRedisCache,
 } from "./helpers";
 import { IProduct, ProductResponse } from "../interfaces/product.interface";
 import { getCachedData } from "../utils/redis";
 
+// Set test environment
+process.env.NODE_ENV = "test";
+
 describe("Product Service", () => {
+  beforeEach(async () => {
+    await clearRedisCache();
+  });
+
+  afterAll(async () => {
+    await clearRedisCache();
+  });
+
   describe("createProduct", () => {
     it("should create a product successfully", async () => {
       const user = await createTestUser();
@@ -69,10 +81,19 @@ describe("Product Service", () => {
 
     it("should return cached data on subsequent requests", async () => {
       const query = { category: "Test Category" };
+
       const result1 = await getProducts(query);
 
-      // Verify cache exists
-      const cacheKey = `products:${JSON.stringify(query)}`;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      const cacheKey = `products:${JSON.stringify({
+        page: 1,
+        limit: 10,
+        search: undefined,
+        category: "Test Category",
+        sortBy: "createdAt",
+        order: "desc",
+      })}`;
       const cachedData = await getCachedData<ProductResponse>(cacheKey);
       expect(cachedData).toBeTruthy();
       expect(cachedData?.products[0]).toHaveProperty(
@@ -80,9 +101,8 @@ describe("Product Service", () => {
         "Test Category"
       );
 
-      // Second request should return cached data
       const result2 = await getProducts(query);
-      expect(result2).toEqual(result1);
+      expect(JSON.stringify(result2)).toBe(JSON.stringify(result1));
     });
   });
 
@@ -109,17 +129,21 @@ describe("Product Service", () => {
     });
 
     it("should return cached data on subsequent requests", async () => {
-      const product1 = await getProductById(productId);
+      const product1 = (await getProductById(productId)) as IProduct & {
+        _id: mongoose.Types.ObjectId;
+      };
 
-      // Verify cache exists
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
       const cacheKey = `product:${productId}`;
       const cachedData = await getCachedData<IProduct>(cacheKey);
       expect(cachedData).toBeTruthy();
       expect(cachedData?.name).toBe("Test Product");
 
-      // Second request should return cached data
-      const product2 = await getProductById(productId);
-      expect(product2).toEqual(product1);
+      const product2 = (await getProductById(productId)) as IProduct & {
+        _id: mongoose.Types.ObjectId;
+      };
+      expect(JSON.stringify(product2)).toBe(JSON.stringify(product1));
     });
   });
 
@@ -162,14 +186,11 @@ describe("Product Service", () => {
     });
 
     it("should invalidate cache after update", async () => {
-      // First get to create cache
       await getProductById(productId);
 
-      // Update product
       const updateData = { name: "Updated Product" };
       await updateProduct(productId, updateData, userId);
 
-      // Verify cache is invalidated
       const cacheKey = `product:${productId}`;
       const cachedData = await getCachedData<IProduct>(cacheKey);
       expect(cachedData).toBeNull();
@@ -206,13 +227,10 @@ describe("Product Service", () => {
     });
 
     it("should invalidate cache after delete", async () => {
-      // First get to create cache
       await getProductById(productId);
 
-      // Delete product
       await deleteProduct(productId, userId);
 
-      // Verify cache is invalidated
       const cacheKey = `product:${productId}`;
       const cachedData = await getCachedData<IProduct>(cacheKey);
       expect(cachedData).toBeNull();
