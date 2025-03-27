@@ -18,6 +18,7 @@ A RESTful API built with Node.js, Express, TypeScript, and MongoDB for managing 
   - Pagination support
   - Category-based filtering
   - Sort by different fields
+  - Redis caching for improved performance
 
 - **Security**
 
@@ -28,11 +29,13 @@ A RESTful API built with Node.js, Express, TypeScript, and MongoDB for managing 
   - Error handling
   - JWT token verification
 
-- **Database**
+- **Database & Caching**
   - MongoDB with Mongoose
+  - Redis for caching
   - Efficient indexing
   - Type-safe schemas
   - Data validation
+  - Cache invalidation on updates
 
 ## Tech Stack
 
@@ -41,6 +44,7 @@ A RESTful API built with Node.js, Express, TypeScript, and MongoDB for managing 
 - TypeScript
 - MongoDB
 - Mongoose
+- Redis
 - JWT
 - Jest (Testing)
 - Docker
@@ -49,6 +53,7 @@ A RESTful API built with Node.js, Express, TypeScript, and MongoDB for managing 
 
 - Node.js (v14 or higher)
 - MongoDB
+- Redis
 - Docker (optional)
 
 ## Installation
@@ -72,7 +77,15 @@ A RESTful API built with Node.js, Express, TypeScript, and MongoDB for managing 
    cp .env.example .env
    ```
 
-   Update the `.env` file with your configuration.
+   Update the `.env` file with your configuration:
+
+   ```
+   MONGODB_URI=mongodb://localhost:27017/manage-products
+   REDIS_URL=redis://localhost:6379
+   JWT_SECRET=your_jwt_secret
+   PORT=3000
+   NODE_ENV=development
+   ```
 
 4. Start the development server:
    ```bash
@@ -88,9 +101,16 @@ A RESTful API built with Node.js, Express, TypeScript, and MongoDB for managing 
    ```
 
 2. Run existing containers:
+
    ```bash
    yarn docker:compose
    ```
+
+   This will start:
+
+   - Node.js application
+   - MongoDB
+   - Redis
 
 ## API Documentation
 
@@ -125,7 +145,7 @@ Login with existing credentials
 
 #### GET /api/v1/products
 
-Get all products with pagination
+Get all products with pagination and caching
 
 - Query Parameters:
   - page (default: 1)
@@ -137,7 +157,7 @@ Get all products with pagination
 
 #### GET /api/v1/products/:id
 
-Get a single product by ID
+Get a single product by ID (cached)
 
 #### POST /api/v1/products
 
@@ -156,11 +176,11 @@ Create a new product (requires authentication)
 
 #### PUT /api/v1/products/:id
 
-Update a product (requires authentication)
+Update a product (requires authentication, invalidates cache)
 
 #### DELETE /api/v1/products/:id
 
-Delete a product (requires authentication)
+Delete a product (requires authentication, invalidates cache)
 
 ## Testing
 
@@ -176,6 +196,8 @@ Run tests with coverage:
 yarn test:coverage
 ```
 
+Note: Tests use a separate Redis database (DB 1) to avoid conflicts with development data.
+
 ## Project Structure
 
 ```
@@ -189,6 +211,7 @@ src/
 ├── services/      # Business logic
 ├── tests/         # Test files
 ├── utils/         # Utility functions
+│   └── redis.ts   # Redis client and cache utilities
 ├── validations/   # Request validation schemas
 ├── app.ts         # Express app setup
 └── server.ts      # Server entry point
@@ -209,6 +232,7 @@ The API uses a centralized error handling mechanism with custom error classes. A
 3. **Security Headers**: Using Helmet middleware
 4. **CORS**: Configured for cross-origin requests
 5. **Password Security**: Passwords are hashed using bcrypt
+6. **Cache Security**: Separate Redis databases for development and testing
 
 ## Contributing
 
